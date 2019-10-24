@@ -1,1 +1,120 @@
-1. new int[n]是创造长度为n的数组，new int(n)为创建一个int型数，并且以n初始化。
+* ##### new int[n]是创造长度为n的数组，new int(n)为创建一个int型数，并且以n初始化;
+* ##### (不知道是否过时)目前唯一能够让template的运用具有可移植的方式，就是在头文件a中以inline function实现template function;
+* ##### string class 被设计为安全易用的组建，其接口几乎不言自明，并且能够对许多可能的错误作检验。
+* ##### STL的设计目标是将不同的算法和数据结构结合在一起，并获得最佳效率。所以stl的使用并不非常便利，也不检验很多可能的逻辑错误。要运用STL强大的框架和优异的效率，必须通晓其概念并小心应用。
+* ##### nullptr用来表示一个pointer指向所谓的novalue。注意nullptr可以自动转换为各种pointer类型，但是不会转换为任何整数类型。因此可以避免null pointer被解释为一个整数值的误解。
+
+
+	void f(int);
+	void f(void *);
+	f(0);//calls f(int)
+	f(NULL);//calls f(int) if NULL is 0, ambiguous otherwise
+	f(nullptr);//calls f(void*)
+* ##### auto可以根据数据初值自动推导其类型，因此必须要有一个初始化操作，即必须直接赋值。
+* ##### 一致性初始化(Uniform Initialization)。
+
+
+	int values[] {1,2,3};
+	std::vector<int> v{2,5,42,3,23,,1,3};
+	std::vector<std::string> cities{
+	"Berlin","Beijing","London","Braunschweig"
+	};
+	std::complex<double> c{4.0,3.0};//equivalent to c(4.0,3.0)
+初值列(Initializer List)会造成所谓的value initialization，即某个local变量属于某种基础类型也会被初始化为0(或nullptr，如果它是个指针)。
+
+	int i;//i has undefined value
+	int j{};//j is initialized by 0
+	int *p; //p has undefined value
+	int *q{};//q is initialized by nullptr
+	//但是窄化也就是精度降低或造成数值变动，对大括号是不成立的
+	int x1(5.3);//x1=5;
+	int x2=5.3;//x2=5;
+	int x3{5.0};//error
+	int x4={5.3};//error
+	char c1{7};//ok
+	char c2{99999};//error
+判断是否窄化时，C++11用以避免许多不兼容性的做法是，依赖初值设定的实际值，而不是只依赖类型，如果一个值可被标的类型(target value)精确描述，其间的转换就不算窄化。浮点数转换至整数永远是一种窄化。
+
+	class P
+	{ 
+		public:
+			P(int a,int b){}
+			explicit P(int a,int b,int c){}
+	};
+	P x(77,5);//ok
+	P y{77,5};//ok
+	P z{77,5,42};//ok
+	P v={77,5};//ok  (implicited type conversion allowed)
+	P w={77,5,42};//error,due to explicit (no implicit type conversion allowed);
+	void fp(const P&);
+	fp({47,11});//ok  隐式转换为P
+	fp({47,11,3});//error
+	fp(P{47,11});//ok
+	fp(P{47,11,3});//ok
+
+* ##### Range-Based for循环(其他编程语言的foreach循环),可以逐一迭代某个给定的区间，数组，集合(range,array,or collection)内的每一个元素
+  for(decl:coll){
+  	statement
+  }
+  其中decl是给定之coll集合中的每个元素的声明。
+  当元素在for循环中被初始化为decl，不得有任何显式类型转换。
+* ##### move语义。
+  用以避免非必要拷贝和临时对象。
+  代码说明：
+	
+
+	insert(const T&x);//for lvalues: copies the value
+	insert(T&& x);// for rvalues: move the value
+	X x;
+	coll.insert(x);//insert copys of x//x is still used
+	..........
+	coll.insert(x+x);//moves contents temporary rvalue
+	.........
+	coll.insert(std::move(x));//moves contents of x into coll
+声明于<utility>的std::move()自身并不做任何moving工作，它只是将其实参转成一个所谓的rvalue reference,被声明为X&&的类型。这种新类型主张rvalue(不具名的临时对象只能出现于赋值操作的右边)可被改动内容。这份契约的含义是，这是个不再需要的临时对象，你可以偷其内容或资源。
+* ##### 右值引用：移动语义和完美转发c++11新特性解析和应用
+对上方c++标准库的再补充
+函数返回临时变量的好处就是不需要声明变量，也不需要知道生命周期。
+gcc似乎直接内置移动语义或者对某些构造函数在某些情况下的省略？写的示例代码并没有调用移动构造函数。
+c++98/03的语言和库中已经有移动语义：
+在某些情况下拷贝构造函数的省略。(copy constructor elision in some contexts)
+智能指针的拷贝。(auto_ptr "copy")
+链表的拼接。("list::splice")
+容器内的置换。(swap on containers)
+
+* 左值，右值，右值引用。
+	在c++98中，可以取地址的，有名字的就是左值。不能取地址的，沒有名字的就是右值。
+	c++11中，右值有两种，将亡值和纯右值(c++98中的)。
+	将亡值是c++新增的跟右值引用相关的表达式，这样的表达式通常是将要被移动的对象。比如返回右值引用T&&的函数返回值、std::move的返回值、或者转换为T&&的类型转换函数的返回值。
+
+
+	T && a = ReturnRValue();//声明了一个名为a的右值引用。//假设ReturnRValue返回一个右值。
+	//右值引用不能绑定到任何的左值。
+	int c;
+	int && d=c;//error!
+	T &e = ReturnRValue();//error
+	const T &e=ReturnRValue();//ok
+	//常量左值引用在c++98中是个万能的引用类型，可以接受非常量左值、常量左值，右值对其进行初始化。
+	//在c++98中，常可以使用常量左值减少临时对象的开销。
+在gcc8.3版本中，似乎c++11新特性解析与应用中的测试都会被优化，因此关于移动语义的测试的构造函数很多都没被调用。因此再用g++编译的时候需要参数-fno-elide-constructors;
+* 关于 -fno-elide-constructors:
+	c++标准允许一种编译器实现省略创建一个只是为了初始化另一个同类型对象的临时对象。指定这个参数将关闭这种优化，强制g++在所有情况下调用构造函数。当然，除了如上方一些情况下的测试功能用例，基本不可能调用这个参数。"如果你的代码依赖于拷贝构造函数的副作用，那么你的代码就写的很烂。你编写的构造函数必须保证这样的优化是安全的。"(g++中被称为RVO/NRVO,Return Value Opyimization,Named Return Value optimization)
+* 通常情况下，程序员会为声明了移动构造函数的类声明一个常量左值为参数的拷贝构造函数，以保证在移动构造不成时，可以使用拷贝构造。
+* 有常量右值引用，const T &7 crvalueref=ReturnRValue();但是其并没有任何用处。
+* 标准库在< type_traits>头文件中提供了三个模板类：is_rvalue_reference,is_lvalue_reference,is_reference	
+* std::move,强制转化为右值。在头文件< utility>中,实际上它并不能移动任何东西，它唯一的功能是将一个左值强制转化为右值引用，继而我们可以通过右值引用使用该值。基本等同于static< T&&>(lvalue);
+* 在c++11中，拷贝构造/赋值和移动构造/赋值函数必须同时提供或者同时不提供，这样程序员才能保证同时具有拷贝和移动语义。只声明其中一种，类都仅能实现一种语义。(因为只声明其中一种编译器便不会生成默认版本的构造函数)
+* 只有移动语义构造函数的类型表明该类型的变量所拥有的资源只能被移动。比如unique_ptr,ifstream
+* 在< type_traits>中，有一些辅助的模板类来判断一个类型是否是可移动的，比如is_move_construcible,is_trivially_move_constructible,is_nothrow_move_constructible;
+* 高性能的置换函数(swap)
+
+	
+	template<typename T>
+	void swap(T&a,T& b){
+		t tmp(move(a));
+		a=move(b);
+		b=move(tmp);
+	}
+	//如果T是可移动的，那么整个过程代码都只会按照移动语义进行指针交换，不会有资源的释放和申请。如果T是不可移动但是可拷贝的，那么拷贝语义会被用来进行置换。跟普通的置换相同。
+* 关于异常和移动语义。可能移动语义还没完成，一个异常却抛出来了，这会导致一些指针成为悬挂指针。**因此程序员应该尽量编写不抛出异常的移动构造函数，通过为其添加一个noexcept关键字，可以保证移动构造函数抛出来的异常会直接调用terminate程序终止运行。同时还有一个std::move_if_noexcept替代模板函数，该函数在没有noexcept关键字修饰时返回一个左值引用从而使变量可以使用拷贝语义，有noexcept时返回一个右值引用从而使用移动语义。(move_if_noexcept牺牲了性能)
+* 完美转发,是指在函数模板中，完全依照模板的参数的类型，将参数传递给函数模板中调用的另外一个函数。c++11通过引用折叠并结合新的模板推导规则来完成完美转发。
